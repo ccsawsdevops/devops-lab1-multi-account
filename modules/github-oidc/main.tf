@@ -25,7 +25,8 @@ resource "aws_iam_role" "github_actions" {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
           StringLike = {
-            # Scope execution strictly to your GitHub repository
+            # Notice "repo:${var.github_org_or_user}/${var.github_repo}:*"
+            # Matches claims like "repo:ccsawsdevops/devops-lab1-multi-account:ref:refs/heads/main"
             "token.actions.githubusercontent.com:sub" = "repo:${var.github_org_or_user}/${var.github_repo}:*"
           }
         }
@@ -34,9 +35,8 @@ resource "aws_iam_role" "github_actions" {
   })
 }
 
-# Attach AdministratorAccess (or custom policy) for Terraform deployments
+# Attach AdministratorAccess for Terraform deployments
 resource "aws_iam_role_policy_attachment" "github_actions_admin" {
   role       = aws_iam_role.github_actions.name
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
-
