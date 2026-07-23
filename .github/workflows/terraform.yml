@@ -1,0 +1,56 @@
+name: "Terraform GitOps Pipeline"
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  id-token: write   # Required for requesting the JWT OIDC token from GitHub
+  contents: read    # Required to checkout the repository code
+  pull-requests: write # Required to post comments on Pull Requests
+
+jobs:
+  terraform:
+    name: "Terraform Check & Plan"
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        environment: [prod, egress]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::631412642519:role/github-actions-terraform-role
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.0
+
+      - name: Terraform Format Check
+        run: terraform fmt -check
+        working-directory: environments/${{ matrix.environment }}
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: environments/${{ matrix.environment }}
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color
+        working-directory: environments/${{ matrix.environment }}
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -auto-approve
+        working-directory: environments/${{ matrix.environment }}
